@@ -10,22 +10,22 @@ import (
 
 func main() {
 	w, h := 401, 401
-	fullImage := image.NewRGBA(image.Rect(0, 0, w*2, h+50))
+	fullImage := image.NewRGBA(image.Rect(0, 0, 882, 491))
 
-	f, err := os.Open("game_header.png")
+	f, err := os.Open("game_template.png")
 	if err != nil {
 		panic(err)
 	}
 
-	gameHeaderImg, _, err := image.Decode(f)
+	gameTemplateImg, _, err := image.Decode(f)
 	if err != nil {
 		panic(err)
 	}
 
-	draw.Draw(fullImage, image.Rect(0, 0, 802, 50), gameHeaderImg, image.Pt(0, 0), draw.Over)
+	draw.Draw(fullImage, image.Rect(0, 0, 882, 491), gameTemplateImg, image.Pt(0, 0), draw.Over)
 
-	yourGameBoard := fullImage.SubImage(image.Rect(0, 50, w, h+50)).(*image.RGBA)
-	theirGameBoard := fullImage.SubImage(image.Rect(w, 50, w*2, h+50)).(*image.RGBA)
+	yourGameBoard := fullImage.SubImage(image.Rect(40, 90, w+80, h+90)).(*image.RGBA)
+	theirGameBoard := fullImage.SubImage(image.Rect(80+w, 90, w*2+80, h+90)).(*image.RGBA)
 
 	gi := NewImage(w, h, yourGameBoard)
 	gi.PlaceAircraftCarrier(0, 0, Horizontal)
