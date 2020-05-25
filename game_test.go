@@ -16,35 +16,35 @@ func TestGameIsAbleToParseAValidPositionString(t *testing.T) {
 			x:         0,
 			y:         0,
 			width:     5,
-			direction: Horizontal,
+			direction: horizontal,
 			shipType:  shipAircraftCarrier,
 		},
 		{
 			x:         7,
 			y:         1,
 			width:     4,
-			direction: Vertical,
+			direction: vertical,
 			shipType:  shipBattleship,
 		},
 		{
 			x:         2,
 			y:         4,
 			width:     3,
-			direction: Horizontal,
+			direction: horizontal,
 			shipType:  shipSubmarine,
 		},
 		{
 			x:         2,
 			y:         6,
 			width:     3,
-			direction: Vertical,
+			direction: vertical,
 			shipType:  shipCruiser,
 		},
 		{
 			x:         7,
 			y:         7,
 			width:     2,
-			direction: Horizontal,
+			direction: horizontal,
 			shipType:  shipDestroyer,
 		},
 	}
@@ -128,6 +128,72 @@ func TestNewGameWillErrorIfThePositionCannotBeParsed(t *testing.T) {
 			_, err := NewGame(invalidPositionString.position)
 			if err == nil {
 				t.Fatalf("Position string \"%s\" should have failed because of \"%s\"", invalidPositionString.position, invalidPositionString.message)
+			}
+		})
+	}
+}
+
+var positionsOffTheBoard = []struct {
+	position string
+	message  string
+}{
+	{
+		"G1V;B8V;E3H;G3V;H8H",
+		"the aircraft carrier position extends off the board by one square",
+	},
+	{
+		"H1V;B8V;E3H;G3V;H8H",
+		"the aircraft carrier position extends off the board by two squares",
+	},
+	{
+		"I1V;B8V;E3H;G3V;H8H",
+		"the aircraft carrier position extends off the board by three squares",
+	},
+	{
+		"J1V;B8V;E3H;G3V;H8H",
+		"the aircraft carrier position extends off the board by four squares",
+	},
+	{
+		"A1H;B8V;E3H;G3V;J10H",
+		"the destroyer position extends off the board by one square",
+	},
+}
+
+func TestNewGameWillFailPositionsThatCannotBePlacedOnTheBoard(t *testing.T) {
+	t.Parallel()
+
+	for _, positionOffTheBoard := range positionsOffTheBoard {
+		t.Run(positionOffTheBoard.message, func(t *testing.T) {
+			_, err := NewGame(positionOffTheBoard.position)
+			if err == nil {
+				t.Fatalf("Position string \"%s\" should have failed because \"%s\"", positionOffTheBoard.position, positionOffTheBoard.message)
+			}
+		})
+	}
+}
+
+var overlappingPositions = []struct {
+	position string
+	message  string
+}{
+	{
+		"A1V;B1H;E3H;G3V;H8H",
+		"battleship is overlapping aircraft carrier",
+	},
+	{
+		"A1H;A2H;E3H;G3V;H8H",
+		"battleship is overlapping aircraft carrier",
+	},
+}
+
+func TestNewGameShouldNotAllowShipsToOverlap(t *testing.T) {
+	t.Parallel()
+
+	for _, overlappingPosition := range overlappingPositions {
+		t.Run(overlappingPosition.message, func(t *testing.T) {
+			_, err := NewGame(overlappingPosition.position)
+			if err == nil {
+				t.Fatalf("Position string \"%s\" should have failed because \"%s\"", overlappingPosition.position, overlappingPosition.message)
 			}
 		})
 	}

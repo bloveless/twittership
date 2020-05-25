@@ -6,25 +6,11 @@ import (
 	"strings"
 )
 
-type shipType int
-
-const (
-	shipAircraftCarrier shipType = iota
-	shipBattleship
-	shipSubmarine
-	shipCruiser
-	shipDestroyer
-)
-
-func (s shipType) String() string {
-	return [...]string{"Aircraft Carrier", "Battleship", "Submarine", "Cruiser", "Destroyer"}[s]
-}
-
 type ship struct {
 	x         int
 	y         int
 	width     int
-	direction string
+	direction shipDirection
 	shipType  shipType
 }
 
@@ -32,6 +18,7 @@ type ship struct {
 type Game struct {
 	positionRegex *regexp.Regexp
 	playerShips   []ship
+	shipWidths    map[shipType]int
 }
 
 // NewGame creates a new game from a string of positions. The positions will be in the following format
@@ -44,94 +31,100 @@ type Game struct {
 func NewGame(positions string) (Game, error) {
 	g := Game{
 		positionRegex: regexp.MustCompile(`([A-J])([0-9]{1,2})([H,V])`),
+		shipWidths: map[shipType]int{
+			shipAircraftCarrier: 5,
+			shipBattleship:      4,
+			shipSubmarine:       3,
+			shipCruiser:         3,
+			shipDestroyer:       2,
+		},
 	}
 
 	pos := strings.Split(positions, ";")
 
+	var err error
+
 	// Deal with the Aircraft Carrier
-	x, y, direction, err := g.parsePosition(pos[0])
+	g.playerShips, err = g.addShip(pos[0], shipAircraftCarrier)
 	if err != nil {
 		return Game{}, err
 	}
-
-	g.playerShips = append(g.playerShips, ship{
-		x:         x,
-		y:         y,
-		width:     5,
-		direction: direction,
-		shipType:  shipAircraftCarrier,
-	})
 
 	// Deal with the Battleship
-	x, y, direction, err = g.parsePosition(pos[1])
+	g.playerShips, err = g.addShip(pos[1], shipBattleship)
 	if err != nil {
 		return Game{}, err
 	}
-
-	g.playerShips = append(g.playerShips, ship{
-		x:         x,
-		y:         y,
-		width:     4,
-		direction: direction,
-		shipType:  shipBattleship,
-	})
 
 	// Deal with the Submarine
-	x, y, direction, err = g.parsePosition(pos[2])
+	g.playerShips, err = g.addShip(pos[2], shipSubmarine)
 	if err != nil {
 		return Game{}, err
 	}
-
-	g.playerShips = append(g.playerShips, ship{
-		x:         x,
-		y:         y,
-		width:     3,
-		direction: direction,
-		shipType:  shipSubmarine,
-	})
 
 	// Deal with the Cruiser
-	x, y, direction, err = g.parsePosition(pos[3])
+	g.playerShips, err = g.addShip(pos[3], shipCruiser)
 	if err != nil {
 		return Game{}, err
 	}
-
-	g.playerShips = append(g.playerShips, ship{
-		x:         x,
-		y:         y,
-		width:     3,
-		direction: direction,
-		shipType:  shipCruiser,
-	})
 
 	// Deal with Destroyer
-	x, y, direction, err = g.parsePosition(pos[4])
+	g.playerShips, err = g.addShip(pos[4], shipDestroyer)
 	if err != nil {
 		return Game{}, err
 	}
-
-	g.playerShips = append(g.playerShips, ship{
-		x:         x,
-		y:         y,
-		width:     2,
-		direction: direction,
-		shipType:  shipDestroyer,
-	})
 
 	return g, nil
 }
 
-func (g Game) parsePosition(position string) (int, int, string, error) {
+func (g Game) addShip(position string, shipType shipType) ([]ship, error) {
+	x, y, direction, err := g.parsePosition(position)
+	if err != nil {
+		return []ship{}, err
+	}
+
+	if direction == horizontal && x+g.shipWidths[shipType] > 9 {
+		return []ship{}, fmt.Errorf("unable to place ship as ship extends off the board")
+	}
+
+	if direction == vertical && y+g.shipWidths[shipType] > 9 {
+		return []ship{}, fmt.Errorf("unable to place ship as ship extends off the board")
+	}
+
+	for _, playerShip := range g.playerShips {
+		if playerShip.direction == vertical {
+			if y >= playerShip.y && y <= playerShip.y+playerShip.width && x == playerShip.x {
+				return []ship{}, fmt.Errorf("unable to place ship as ship overlaps another ship")
+			}
+		}
+
+		if playerShip.direction == horizontal {
+			if x >= playerShip.x && x <= playerShip.x+playerShip.width && y == playerShip.y {
+				return []ship{}, fmt.Errorf("unable to place ship as ship overlaps another ship")
+			}
+		}
+	}
+
+	return append(g.playerShips, ship{
+		x:         x,
+		y:         y,
+		width:     g.shipWidths[shipType],
+		direction: direction,
+		shipType:  shipType,
+	}), nil
+}
+
+func (g Game) parsePosition(position string) (int, int, shipDirection, error) {
 	parts := g.positionRegex.FindStringSubmatch(position)
 	yPos := 0
 	xPos := 0
-	direction := Horizontal
+	direction := horizontal
 
 	// We do not need defaults in the switches below when checking parts[1] (the letter column) or parts[3]
 	// (the direction) because the regular expression only allows valid inputs which means that this check
 	// will catch any errors in input for parts[1] (letter column) and parts[3] (direction).
 	if parts == nil || len(parts) != 4 {
-		return 0, 0, "", fmt.Errorf("unable to parse position string: %v", position)
+		return 0, 0, horizontal, fmt.Errorf("unable to parse position string: %v", position)
 	}
 
 	switch parts[1] {
@@ -179,14 +172,14 @@ func (g Game) parsePosition(position string) (int, int, string, error) {
 	case "10":
 		xPos = 9
 	default:
-		return 0, 0, "", fmt.Errorf("unable to parse position string: %v", position)
+		return 0, 0, horizontal, fmt.Errorf("unable to parse position string: %v", position)
 	}
 
 	switch parts[3] {
 	case "H":
-		direction = Horizontal
+		direction = horizontal
 	case "V":
-		direction = Vertical
+		direction = vertical
 	}
 
 	return xPos, yPos, direction, nil
