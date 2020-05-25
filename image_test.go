@@ -45,10 +45,10 @@ func TestDrawBaseImage(t *testing.T) {
 	}
 
 	gameBoardImage.playerImage.PlaceAircraftCarrier(0, 0, Horizontal)
-	gameBoardImage.playerImage.PlaceBattleship(1, 2, Horizontal)
+	gameBoardImage.playerImage.PlaceBattleship(7, 1, Vertical)
 	gameBoardImage.playerImage.PlaceSubmarine(2, 4, Horizontal)
-	gameBoardImage.playerImage.PlaceCruiser(3, 6, Horizontal)
-	gameBoardImage.playerImage.PlaceDestroyer(4, 8, Horizontal)
+	gameBoardImage.playerImage.PlaceCruiser(2, 6, Vertical)
+	gameBoardImage.playerImage.PlaceDestroyer(7, 7, Horizontal)
 
 	gameBoardImage.playerImage.DrawHit(1, 0)
 	gameBoardImage.playerImage.DrawMiss(1, 1)
