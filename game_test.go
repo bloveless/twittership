@@ -5,52 +5,83 @@ import (
 	"testing"
 )
 
-func TestGameIsAbleToParseAValidPositionString(t *testing.T) {
-	g, err := NewGame("A1H;B8V;E3H;G3V;H8H")
-	if err != nil {
-		t.Errorf("creating a new game: %v", err)
-	}
+var validPositionStrings = []struct {
+	name      string
+	positions string
+	expected  []ship
+}{
+	{
+		name:      "basic positions",
+		positions: "A1H;B8V;E3H;G3V;H8H",
+		expected: []ship{
+			{
+				x:         0,
+				y:         0,
+				width:     5,
+				hits:      0,
+				direction: horizontal,
+				shipType:  shipAircraftCarrier,
+			},
+			{
+				x:         7,
+				y:         1,
+				width:     4,
+				hits:      0,
+				direction: vertical,
+				shipType:  shipBattleship,
+			},
+			{
+				x:         2,
+				y:         4,
+				width:     3,
+				hits:      0,
+				direction: horizontal,
+				shipType:  shipSubmarine,
+			},
+			{
+				x:         2,
+				y:         6,
+				width:     3,
+				hits:      0,
+				direction: vertical,
+				shipType:  shipCruiser,
+			},
+			{
+				x:         7,
+				y:         7,
+				width:     2,
+				hits:      0,
+				direction: horizontal,
+				shipType:  shipDestroyer,
+			},
+		},
+	},
+}
 
-	expectedShips := []ship{
-		{
-			x:         0,
-			y:         0,
-			width:     5,
-			direction: horizontal,
-			shipType:  shipAircraftCarrier,
-		},
-		{
-			x:         7,
-			y:         1,
-			width:     4,
-			direction: vertical,
-			shipType:  shipBattleship,
-		},
-		{
-			x:         2,
-			y:         4,
-			width:     3,
-			direction: horizontal,
-			shipType:  shipSubmarine,
-		},
-		{
-			x:         2,
-			y:         6,
-			width:     3,
-			direction: vertical,
-			shipType:  shipCruiser,
-		},
-		{
-			x:         7,
-			y:         7,
-			width:     2,
-			direction: horizontal,
-			shipType:  shipDestroyer,
-		},
-	}
+func TestGameIsAbleToLoadShipsFromAValidPositionString(t *testing.T) {
+	t.Parallel()
 
-	if !reflect.DeepEqual(g.playerShips, expectedShips) {
-		t.Fatalf("Player ships did not match expected ships.\nPlayer: %v\nExpected: %v\n", g.playerShips, expectedShips)
+	for _, validPositionString := range validPositionStrings {
+		t.Run(validPositionString.name, func(t *testing.T) {
+			g := NewGame()
+			err := g.LoadPlayerShips(validPositionString.positions)
+			if err != nil {
+				t.Errorf("setting player ships: %v", err)
+			}
+
+			if !reflect.DeepEqual(g.playerShips, validPositionString.expected) {
+				t.Fatalf("Player ships did not match expected ships.\nPlayer: %v\nExpected: %v\n", g.playerShips, validPositionString.expected)
+			}
+
+			err = g.LoadEnemyShips(validPositionString.positions)
+			if err != nil {
+				t.Errorf("setting enemy ships: %v", err)
+			}
+
+			if !reflect.DeepEqual(g.enemyShips, validPositionString.expected) {
+				t.Fatalf("Enemy ships did not match expected ships.\nEnemy: %v\nExpected: %v\n", g.playerShips, validPositionString.expected)
+			}
+		})
 	}
 }
 
@@ -120,14 +151,20 @@ var invalidPositionStrings = []struct {
 	},
 }
 
-func TestNewGameWillErrorIfThePositionCannotBeParsed(t *testing.T) {
+func TestNewGameWillNotLoadPositionsThatCannotBeParsed(t *testing.T) {
 	t.Parallel()
 
 	for _, invalidPositionString := range invalidPositionStrings {
 		t.Run(invalidPositionString.message, func(t *testing.T) {
-			_, err := NewGame(invalidPositionString.position)
+			g := NewGame()
+			err := g.LoadPlayerShips(invalidPositionString.position)
 			if err == nil {
-				t.Fatalf("Position string \"%s\" should have failed because of \"%s\"", invalidPositionString.position, invalidPositionString.message)
+				t.Fatalf("Player position string \"%s\" should have failed because of \"%s\"", invalidPositionString.position, invalidPositionString.message)
+			}
+
+			err = g.LoadEnemyShips(invalidPositionString.position)
+			if err == nil {
+				t.Fatalf("Enemy position string \"%s\" should have failed because of \"%s\"", invalidPositionString.position, invalidPositionString.message)
 			}
 		})
 	}
@@ -159,14 +196,20 @@ var positionsOffTheBoard = []struct {
 	},
 }
 
-func TestNewGameWillFailPositionsThatCannotBePlacedOnTheBoard(t *testing.T) {
+func TestNewGameWillNotLoadPositionsThatCannotBePlacedOnTheBoard(t *testing.T) {
 	t.Parallel()
 
 	for _, positionOffTheBoard := range positionsOffTheBoard {
 		t.Run(positionOffTheBoard.message, func(t *testing.T) {
-			_, err := NewGame(positionOffTheBoard.position)
+			g := NewGame()
+			err := g.LoadPlayerShips(positionOffTheBoard.position)
 			if err == nil {
-				t.Fatalf("Position string \"%s\" should have failed because \"%s\"", positionOffTheBoard.position, positionOffTheBoard.message)
+				t.Fatalf("Player position string \"%s\" should have failed because \"%s\"", positionOffTheBoard.position, positionOffTheBoard.message)
+			}
+
+			err = g.LoadEnemyShips(positionOffTheBoard.position)
+			if err == nil {
+				t.Fatalf("Enemy position string \"%s\" should have failed because \"%s\"", positionOffTheBoard.position, positionOffTheBoard.message)
 			}
 		})
 	}
@@ -186,15 +229,146 @@ var overlappingPositions = []struct {
 	},
 }
 
-func TestNewGameShouldNotAllowShipsToOverlap(t *testing.T) {
+func TestNewGameWillNotLoadShipsThatOverlap(t *testing.T) {
 	t.Parallel()
 
 	for _, overlappingPosition := range overlappingPositions {
 		t.Run(overlappingPosition.message, func(t *testing.T) {
-			_, err := NewGame(overlappingPosition.position)
+			g := NewGame()
+			err := g.LoadPlayerShips(overlappingPosition.position)
 			if err == nil {
-				t.Fatalf("Position string \"%s\" should have failed because \"%s\"", overlappingPosition.position, overlappingPosition.message)
+				t.Fatalf("Player position string \"%s\" should have failed because \"%s\"", overlappingPosition.position, overlappingPosition.message)
+			}
+
+			err = g.LoadEnemyShips(overlappingPosition.position)
+			if err == nil {
+				t.Fatalf("Enemy position string \"%s\" should have failed because \"%s\"", overlappingPosition.position, overlappingPosition.message)
 			}
 		})
+	}
+}
+
+var validVolleyStrings = []struct {
+	name            string
+	shipPositions   string
+	volleyPositions string
+	expectedVolleys []volley
+}{
+	{
+		name:            "normal volleys",
+		volleyPositions: "A1;B1;C8",
+		shipPositions:   "A1H;B8V;E3H;G3V;H8H",
+		expectedVolleys: []volley{
+			{
+				x:          0,
+				y:          0,
+				volleyType: hit,
+			},
+			{
+				x:          0,
+				y:          1,
+				volleyType: miss,
+			},
+			{
+				x:          7,
+				y:          2,
+				volleyType: hit,
+			},
+		},
+	},
+}
+
+func TestGameLoadsVolleysAsEitherHitsOrMisses(t *testing.T) {
+	t.Parallel()
+
+	for _, validVolleyString := range validVolleyStrings {
+		t.Run(validVolleyString.name, func(t *testing.T) {
+			g := NewGame()
+			err := g.LoadPlayerShips(validVolleyString.shipPositions)
+			if err != nil {
+				t.Fatalf("setting player ships: %v", err)
+			}
+
+			err = g.LoadEnemyShips(validVolleyString.shipPositions)
+			if err != nil {
+				t.Fatalf("setting enemy ships: %v", err)
+			}
+
+			err = g.LoadPlayerVolleys(validVolleyString.volleyPositions)
+			if err != nil {
+				t.Fatalf("setting player volleys: %v", err)
+			}
+
+			if !reflect.DeepEqual(g.playerVolleys, validVolleyString.expectedVolleys) {
+				t.Fatalf("Player volleys did not match expected volleys.\nPlayer: %v\nExpected: %v\n", g.playerVolleys, validVolleyString.expectedVolleys)
+			}
+
+			err = g.LoadEnemyVolleys(validVolleyString.volleyPositions)
+			if err != nil {
+				t.Fatalf("setting enemy volleys: %v", err)
+			}
+
+			if !reflect.DeepEqual(g.enemyVolleys, validVolleyString.expectedVolleys) {
+				t.Fatalf("Enemy volleys did not match expected volleys.\nEnemy: %v\nExpected: %v\n", g.enemyVolleys, validVolleyString.expectedVolleys)
+			}
+		})
+	}
+}
+
+func TestCannotLoadPlayerVolleysBeforeLoadingEnemyShips(t *testing.T) {
+	g := NewGame()
+	err := g.LoadPlayerVolleys("A1;B1")
+	if err == nil {
+		t.Fatalf("Should have failed when trying to place player volleys before enemy ships")
+	}
+}
+
+func TestCannotLoadEnemyVolleysBeforeLoadingPlayerShips(t *testing.T) {
+	g := NewGame()
+	err := g.LoadEnemyVolleys("A1;B1")
+	if err == nil {
+		t.Fatalf("Should have failed when trying to place enemy volleys before player ships")
+	}
+}
+
+func TestPlayerShipsGetUpdatedWithHitCountWhenAVolleyHitsThem(t *testing.T) {
+	g := NewGame()
+	err := g.LoadPlayerShips("A1H;B8V;E3H;G3V;H8H")
+	if err != nil {
+		t.Fatalf("updating player ships: %v", err)
+	}
+
+	err = g.LoadEnemyVolleys("A1;B1;C8")
+	if err != nil {
+		t.Fatalf("updating enemy volleys: %v", err)
+	}
+
+	if g.playerShips[0].hits != 1 {
+		t.Fatalf("Player ship[0] should have received a hit")
+	}
+
+	if g.playerShips[1].hits != 1 {
+		t.Fatalf("Player ship[1] should have received a hit")
+	}
+}
+
+func TestEnemyShipsGetUpdatedWithHitCountWhenAVolleyHitsThem(t *testing.T) {
+	g := NewGame()
+	err := g.LoadEnemyShips("A1H;B8V;E3H;G3V;H8H")
+	if err != nil {
+		t.Fatalf("updating player ships: %v", err)
+	}
+
+	err = g.LoadPlayerVolleys("A1;B1;C8")
+	if err != nil {
+		t.Fatalf("updating enemy volleys: %v", err)
+	}
+
+	if g.enemyShips[0].hits != 1 {
+		t.Fatalf("Enemy ship[0] should have received a hit")
+	}
+
+	if g.enemyShips[1].hits != 1 {
+		t.Fatalf("Enemy ship[1] should have received a hit")
 	}
 }

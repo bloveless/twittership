@@ -20,50 +20,68 @@ func readTestFile(t *testing.T, filename string) image.Image {
 	return testFile
 }
 
-// writeFile will write the current game board to the file system, mainly used for debugging the image tests
-// func writeFile(path string, img image.Image) {
-// 	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0600)
-// 	if err != nil {
-// 		fmt.Println(err)
-// 		return
-// 	}
-// 	defer f.Close()
-// 	png.Encode(f, img)
-// }
+var drawImageParams = []struct {
+	name            string
+	playerPositions string
+	playerVolleys   string
+	enemyPositions  string
+	enemyVolleys    string
+	expectedImage   string
+}{
+	{
+		name:            "normal game player and enemy have same positions",
+		playerPositions: "A1H;B8V;E3H;G3V;H8H",
+		playerVolleys:   "A1;B1",
+		enemyPositions:  "A1H;B8V;E3H;G3V;H8H",
+		enemyVolleys:    "A2;B2",
+		expectedImage:   "game_1.png",
+	},
+}
 
-// TestDrawBaseImage generates an image and makes sure that it will generate the same image
+// TestGameImageCanDrawPixelPerfectImages generates an image and makes sure that it will generate the same image
 // compared pixel by pixel. NOTE: If modifying the expected image make sure to save it without
 // an alpha channel otherwise it will generate a 32bit PNG rather than a 24bit PNG, as is expected.
-func TestDrawBaseImage(t *testing.T) {
-	w, h := 401, 401
-	game, err := NewGame("A1H;B8V;E3H;G3V;H8H")
-	if err != nil {
-		t.Fatalf("creating new game: %v", err)
-	}
+func TestGameImageCanDrawPixelPerfectImages(t *testing.T) {
+	t.Parallel()
 
-	gameImage, err := NewGameImageFromGame(game, w, h)
-	if err != nil {
-		t.Fatalf("creating new game image: %v", err)
-	}
-
-	gameImage.playerImage.DrawHit(1, 0)
-	gameImage.playerImage.DrawMiss(1, 1)
-
-	gameImage.enemyImage.DrawHit(0, 0)
-	gameImage.enemyImage.DrawMiss(0, 1)
-
-	expectedImage := readTestFile(t, "game_1.png")
-
-	// err = gameImage.WriteImage("game.png")
-	// if err != nil {
-	// 	t.Fatalf("writing game.png: %v", err)
-	// }
-
-	for x := 0; x < 882; x++ {
-		for y := 0; y < 491; y++ {
-			if expectedImage.At(x, y) != gameImage.fullImage.At(x, y) {
-				t.Fatalf("Color at x: %d y: %d did not match the expected image color", x, y)
+	for _, drawImageParam := range drawImageParams {
+		t.Run(drawImageParam.name, func(t *testing.T) {
+			w, h := 401, 401
+			game := NewGame()
+			err := game.LoadPlayerShips(drawImageParam.playerPositions)
+			if err != nil {
+				t.Fatalf("setting player ships: %v", err)
 			}
-		}
+
+			err = game.LoadEnemyShips(drawImageParam.enemyPositions)
+			if err != nil {
+				t.Fatalf("setting enemy ships: %v", err)
+			}
+
+			err = game.LoadPlayerVolleys(drawImageParam.playerVolleys)
+			if err != nil {
+				t.Fatalf("setting player volleys: %v", err)
+			}
+
+			err = game.LoadEnemyVolleys(drawImageParam.enemyVolleys)
+			if err != nil {
+				t.Fatalf("setting enemy volleys: %v", err)
+			}
+
+			gameImage, err := NewGameImageFromGame(game, w, h)
+			if err != nil {
+				t.Fatalf("creating new game image: %v", err)
+			}
+
+			expectedImage := readTestFile(t, drawImageParam.expectedImage)
+
+			for x := 0; x < 882; x++ {
+				for y := 0; y < 491; y++ {
+					if expectedImage.At(x, y) != gameImage.fullImage.At(x, y) {
+						t.Fatalf("Color at x: %d y: %d did not match the expected image color", x, y)
+					}
+				}
+			}
+		})
 	}
 }

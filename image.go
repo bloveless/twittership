@@ -36,15 +36,33 @@ func NewGameImageFromGame(g Game, h, w int) (GameImage, error) {
 	for _, playerShip := range g.playerShips {
 		switch playerShip.shipType {
 		case shipAircraftCarrier:
-			gi.playerImage.PlaceAircraftCarrier(playerShip.x, playerShip.y, playerShip.direction)
+			gi.playerImage.placeAircraftCarrier(playerShip.x, playerShip.y, playerShip.direction)
 		case shipBattleship:
-			gi.playerImage.PlaceBattleship(playerShip.x, playerShip.y, playerShip.direction)
+			gi.playerImage.placeBattleship(playerShip.x, playerShip.y, playerShip.direction)
 		case shipSubmarine:
-			gi.playerImage.PlaceSubmarine(playerShip.x, playerShip.y, playerShip.direction)
+			gi.playerImage.placeSubmarine(playerShip.x, playerShip.y, playerShip.direction)
 		case shipCruiser:
-			gi.playerImage.PlaceCruiser(playerShip.x, playerShip.y, playerShip.direction)
+			gi.playerImage.placeCruiser(playerShip.x, playerShip.y, playerShip.direction)
 		case shipDestroyer:
-			gi.playerImage.PlaceDestroyer(playerShip.x, playerShip.y, playerShip.direction)
+			gi.playerImage.placeDestroyer(playerShip.x, playerShip.y, playerShip.direction)
+		}
+	}
+
+	for _, playerVolley := range g.playerVolleys {
+		switch playerVolley.volleyType {
+		case hit:
+			gi.enemyImage.drawHit(playerVolley.x, playerVolley.y)
+		case miss:
+			gi.enemyImage.drawMiss(playerVolley.x, playerVolley.y)
+		}
+	}
+
+	for _, enemyVolley := range g.enemyVolleys {
+		switch enemyVolley.volleyType {
+		case hit:
+			gi.playerImage.drawHit(enemyVolley.x, enemyVolley.y)
+		case miss:
+			gi.playerImage.drawMiss(enemyVolley.x, enemyVolley.y)
 		}
 	}
 
@@ -116,28 +134,28 @@ func (ui userImage) drawBackground() {
 	}
 }
 
-// PlaceAircraftCarrier draws an aircraft carrier on the game board. Size 5
-func (ui userImage) PlaceAircraftCarrier(x, y int, direction shipDirection) {
+// placeAircraftCarrier draws an aircraft carrier on the game board. Size 5
+func (ui userImage) placeAircraftCarrier(x, y int, direction shipDirection) {
 	ui.drawShip(x, y, 5, direction)
 }
 
-// PlaceBattleship draws a battleship on the game board. Size 4
-func (ui userImage) PlaceBattleship(x, y int, direction shipDirection) {
+// placeBattleship draws a battleship on the game board. Size 4
+func (ui userImage) placeBattleship(x, y int, direction shipDirection) {
 	ui.drawShip(x, y, 4, direction)
 }
 
-// PlaceSubmarine draws a submarine on the game board. Size 3
-func (ui userImage) PlaceSubmarine(x, y int, direction shipDirection) {
+// placeSubmarine draws a submarine on the game board. Size 3
+func (ui userImage) placeSubmarine(x, y int, direction shipDirection) {
 	ui.drawShip(x, y, 3, direction)
 }
 
-// PlaceCruiser draws a cruiser on the game board. Size 3
-func (ui userImage) PlaceCruiser(x, y int, direction shipDirection) {
+// placeCruiser draws a cruiser on the game board. Size 3
+func (ui userImage) placeCruiser(x, y int, direction shipDirection) {
 	ui.drawShip(x, y, 3, direction)
 }
 
-// PlaceDestroyer draws a destroyer on the game board. Size 2
-func (ui userImage) PlaceDestroyer(x, y int, direction shipDirection) {
+// placeDestroyer draws a destroyer on the game board. Size 2
+func (ui userImage) placeDestroyer(x, y int, direction shipDirection) {
 	ui.drawShip(x, y, 2, direction)
 }
 
@@ -167,12 +185,12 @@ func (ui userImage) drawShip(x, y, width int, direction shipDirection) {
 }
 
 // DrawHit draws a hit mark on the game image
-func (ui userImage) DrawHit(x, y int) {
+func (ui userImage) drawHit(x, y int) {
 	ui.drawVolley(x, y, hit)
 }
 
 // DrawMiss draws a miss mark on the game image
-func (ui userImage) DrawMiss(x, y int) {
+func (ui userImage) drawMiss(x, y int) {
 	ui.drawVolley(x, y, miss)
 }
 

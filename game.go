@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -10,27 +11,33 @@ type ship struct {
 	x         int
 	y         int
 	width     int
+	hits      int
 	direction shipDirection
 	shipType  shipType
 }
 
-// Game contains all the information necessary to play a game of battleship
-type Game struct {
-	positionRegex *regexp.Regexp
-	playerShips   []ship
-	shipWidths    map[shipType]int
+type volley struct {
+	x          int
+	y          int
+	volleyType volleyType
 }
 
-// NewGame creates a new game from a string of positions. The positions will be in the following format
-// pos[0] Aircraft Carrier Position + Direction
-// pos[1] Battleship Position + Direction
-// pos[2] Submarine Position + Direction
-// pos[3] Cruiser Position + Direction
-// pos[4] Destroyer Position + Direction
-// I.E. A1H;B8V;E3H;G3V;H8H
-func NewGame(positions string) (Game, error) {
+// Game contains all the information necessary to play a game of battleship
+type Game struct {
+	shipPositionRegex   *regexp.Regexp
+	volleyPositionRegex *regexp.Regexp
+	playerShips         []ship
+	playerVolleys       []volley
+	enemyShips          []ship
+	enemyVolleys        []volley
+	shipWidths          map[shipType]int
+}
+
+// NewGame creates a new game with default shipPositionRegex and shipWidths
+func NewGame() Game {
 	g := Game{
-		positionRegex: regexp.MustCompile(`([A-J])([0-9]{1,2})([H,V])`),
+		shipPositionRegex:   regexp.MustCompile(`([A-J])([0-9]{1,2})([H,V])`),
+		volleyPositionRegex: regexp.MustCompile(`([A-J])([0-9]{1,2})`),
 		shipWidths: map[shipType]int{
 			shipAircraftCarrier: 5,
 			shipBattleship:      4,
@@ -40,44 +47,86 @@ func NewGame(positions string) (Game, error) {
 		},
 	}
 
-	pos := strings.Split(positions, ";")
+	return g
+}
 
+// LoadPlayerShips loads the player ships from a string of positions.
+// The positions will be in the following format:
+// 	 pos[0] Aircraft Carrier Position + Direction
+//   pos[1] Battleship Position + Direction
+//   pos[2] Submarine Position + Direction
+//   pos[3] Cruiser Position + Direction
+//   pos[4] Destroyer Position + Direction
+// I.E. A1H;B8V;E3H;G3V;H8H
+func (g *Game) LoadPlayerShips(positions string) error {
+	var err error
+
+	g.playerShips, err = g.getShipsFromPositions(positions)
+	if err != nil {
+		return fmt.Errorf("setting player positions: %w", err)
+	}
+
+	return nil
+}
+
+// LoadEnemyShips updates the enemy ships within the game from a string of positions.
+// The positions will be in the following format:
+// 	 pos[0] Aircraft Carrier Position + Direction
+//   pos[1] Battleship Position + Direction
+//   pos[2] Submarine Position + Direction
+//   pos[3] Cruiser Position + Direction
+//   pos[4] Destroyer Position + Direction
+// I.E. A1H;B8V;E3H;G3V;H8H
+func (g *Game) LoadEnemyShips(positions string) error {
+	var err error
+
+	g.enemyShips, err = g.getShipsFromPositions(positions)
+	if err != nil {
+		return fmt.Errorf("settings enemy positions: %w", err)
+	}
+
+	return nil
+}
+
+func (g Game) getShipsFromPositions(positions string) ([]ship, error) {
+	pos := strings.Split(positions, ";")
+	var ships []ship
 	var err error
 
 	// Deal with the Aircraft Carrier
-	g.playerShips, err = g.addShip(pos[0], shipAircraftCarrier)
+	ships, err = g.addShip(ships, pos[0], shipAircraftCarrier)
 	if err != nil {
-		return Game{}, err
+		return []ship{}, err
 	}
 
 	// Deal with the Battleship
-	g.playerShips, err = g.addShip(pos[1], shipBattleship)
+	ships, err = g.addShip(ships, pos[1], shipBattleship)
 	if err != nil {
-		return Game{}, err
+		return []ship{}, err
 	}
 
 	// Deal with the Submarine
-	g.playerShips, err = g.addShip(pos[2], shipSubmarine)
+	ships, err = g.addShip(ships, pos[2], shipSubmarine)
 	if err != nil {
-		return Game{}, err
+		return []ship{}, err
 	}
 
 	// Deal with the Cruiser
-	g.playerShips, err = g.addShip(pos[3], shipCruiser)
+	ships, err = g.addShip(ships, pos[3], shipCruiser)
 	if err != nil {
-		return Game{}, err
+		return []ship{}, err
 	}
 
 	// Deal with Destroyer
-	g.playerShips, err = g.addShip(pos[4], shipDestroyer)
+	ships, err = g.addShip(ships, pos[4], shipDestroyer)
 	if err != nil {
-		return Game{}, err
+		return []ship{}, err
 	}
 
-	return g, nil
+	return ships, nil
 }
 
-func (g Game) addShip(position string, shipType shipType) ([]ship, error) {
+func (g Game) addShip(ships []ship, position string, shipType shipType) ([]ship, error) {
 	x, y, direction, err := g.parsePosition(position)
 	if err != nil {
 		return []ship{}, err
@@ -91,7 +140,7 @@ func (g Game) addShip(position string, shipType shipType) ([]ship, error) {
 		return []ship{}, fmt.Errorf("unable to place ship as ship extends off the board")
 	}
 
-	for _, playerShip := range g.playerShips {
+	for _, playerShip := range ships {
 		if playerShip.direction == vertical {
 			if y >= playerShip.y && y <= playerShip.y+playerShip.width && x == playerShip.x {
 				return []ship{}, fmt.Errorf("unable to place ship as ship overlaps another ship")
@@ -105,7 +154,7 @@ func (g Game) addShip(position string, shipType shipType) ([]ship, error) {
 		}
 	}
 
-	return append(g.playerShips, ship{
+	return append(ships, ship{
 		x:         x,
 		y:         y,
 		width:     g.shipWidths[shipType],
@@ -115,64 +164,25 @@ func (g Game) addShip(position string, shipType shipType) ([]ship, error) {
 }
 
 func (g Game) parsePosition(position string) (int, int, shipDirection, error) {
-	parts := g.positionRegex.FindStringSubmatch(position)
-	yPos := 0
-	xPos := 0
+	parts := g.shipPositionRegex.FindStringSubmatch(position)
 	direction := horizontal
 
-	// We do not need defaults in the switches below when checking parts[1] (the letter column) or parts[3]
-	// (the direction) because the regular expression only allows valid inputs which means that this check
-	// will catch any errors in input for parts[1] (letter column) and parts[3] (direction).
 	if parts == nil || len(parts) != 4 {
-		return 0, 0, horizontal, fmt.Errorf("unable to parse position string: %v", position)
+		return 0, 0, horizontal, fmt.Errorf("unable to parse ship position string: %v", position)
 	}
 
-	switch parts[1] {
-	case "A":
-		yPos = 0
-	case "B":
-		yPos = 1
-	case "C":
-		yPos = 2
-	case "D":
-		yPos = 3
-	case "E":
-		yPos = 4
-	case "F":
-		yPos = 5
-	case "G":
-		yPos = 6
-	case "H":
-		yPos = 7
-	case "I":
-		yPos = 8
-	case "J":
-		yPos = 9
+	// yPos can't be out of range or invalid due to the regex that is used to get parts[1]
+	yPos := int(parts[1][0]) - 'A'
+
+	xPos, err := strconv.Atoi(parts[2])
+	if err != nil {
+		return 0, 0, horizontal, fmt.Errorf("unable to parse ship x position: %v", err)
 	}
 
-	switch parts[2] {
-	case "1":
-		xPos = 0
-	case "2":
-		xPos = 1
-	case "3":
-		xPos = 2
-	case "4":
-		xPos = 3
-	case "5":
-		xPos = 4
-	case "6":
-		xPos = 5
-	case "7":
-		xPos = 6
-	case "8":
-		xPos = 7
-	case "9":
-		xPos = 8
-	case "10":
-		xPos = 9
-	default:
-		return 0, 0, horizontal, fmt.Errorf("unable to parse position string: %v", position)
+	xPos--
+
+	if xPos < 0 || xPos > 9 {
+		return 0, 0, horizontal, fmt.Errorf("unable to parse ship x position: out of range")
 	}
 
 	switch parts[3] {
@@ -183,4 +193,88 @@ func (g Game) parsePosition(position string) (int, int, shipDirection, error) {
 	}
 
 	return xPos, yPos, direction, nil
+}
+
+func (g *Game) LoadPlayerVolleys(positions string) error {
+	var err error
+
+	if len(g.enemyShips) == 0 {
+		return fmt.Errorf("cannot place player volleys before placing enemy ships")
+	}
+
+	g.playerVolleys, g.enemyShips, err = g.getVolleysFromPositions(g.enemyShips, positions)
+	if err != nil {
+		return fmt.Errorf("setting player volleys: %w", err)
+	}
+
+	return nil
+}
+
+func (g *Game) LoadEnemyVolleys(positions string) error {
+	var err error
+
+	if len(g.playerShips) == 0 {
+		return fmt.Errorf("cannot place enemy volleys before placing player ships")
+	}
+
+	g.enemyVolleys, g.playerShips, err = g.getVolleysFromPositions(g.playerShips, positions)
+	if err != nil {
+		return fmt.Errorf("setting enemy volleys: %w", err)
+	}
+
+	return nil
+}
+
+func (g Game) getVolleysFromPositions(ships []ship, positions string) ([]volley, []ship, error) {
+	pos := strings.Split(positions, ";")
+	var volleys []volley
+
+	for _, volleyPos := range pos {
+		parts := g.volleyPositionRegex.FindStringSubmatch(volleyPos)
+
+		if parts == nil || len(parts) != 3 {
+			return []volley{}, []ship{}, fmt.Errorf("unable to parse volley position string: %s", positions)
+		}
+
+		// yPos can't be out of range or invalid due to the regex that is used to get parts[1]
+		yPos := int(parts[1][0]) - 'A'
+
+		xPos, err := strconv.Atoi(parts[2])
+		if err != nil {
+			return []volley{}, []ship{}, fmt.Errorf("unable to parse volley x position: %v", err)
+		}
+
+		xPos--
+
+		if xPos < 0 || xPos > 9 {
+			return []volley{}, []ship{}, fmt.Errorf("unable to parse volley x position: value out of range")
+		}
+
+		vType := miss
+		for i, currentShip := range ships {
+			if currentShip.direction == horizontal {
+				if xPos >= currentShip.x && xPos <= currentShip.x+g.shipWidths[currentShip.shipType] && yPos == currentShip.y {
+					ships[i].hits++
+					vType = hit
+					break
+				}
+			}
+
+			if currentShip.direction == vertical {
+				if yPos >= currentShip.y && yPos <= currentShip.y+g.shipWidths[currentShip.shipType] && xPos == currentShip.x {
+					ships[i].hits++
+					vType = hit
+					break
+				}
+			}
+		}
+
+		volleys = append(volleys, volley{
+			x:          xPos,
+			y:          yPos,
+			volleyType: vType,
+		})
+	}
+
+	return volleys, ships, nil
 }
