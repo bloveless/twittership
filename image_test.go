@@ -20,10 +20,9 @@ func readTestFile(t *testing.T, filename string) image.Image {
 	}
 
 	return testFile
-
 }
 
-// writeFile will write the current gameboard to the file system, mainly used for debugging the image tests
+// writeFile will write the current game board to the file system, mainly used for debugging the image tests
 func writeFile(path string, img image.Image) {
 	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
