@@ -3,18 +3,14 @@ package main
 type shipDirection int
 
 const (
-	// horizontal is used to lay a ship horizontally
 	horizontal shipDirection = iota
-	// vertical is used to lay a ship vertically
 	vertical
 )
 
 type volleyType int
 
 const (
-	// Hit is used to classify a volley as a hit
 	hit volleyType = iota
-	// Miss is used to classify a volley as a miss
 	miss
 )
 
@@ -27,3 +23,39 @@ const (
 	shipCruiser
 	shipDestroyer
 )
+
+func (s shipType) String() string {
+	return [...]string{"Aircraft Carrier", "Battleship", "Submarine", "Cruiser", "Destroyer"}[s]
+}
+
+const (
+	aircraftCarrierWidth = 5
+	battleshipWidth      = 4
+	submarineWidth       = 3
+	cruiserWidth         = 3
+	destroyerWidth       = 2
+)
+
+func getShipWidth(shipType shipType) int {
+	if shipType == shipAircraftCarrier {
+		return aircraftCarrierWidth
+	}
+
+	if shipType == shipBattleship {
+		return battleshipWidth
+	}
+
+	if shipType == shipSubmarine {
+		return submarineWidth
+	}
+
+	if shipType == shipCruiser {
+		return cruiserWidth
+	}
+
+	if shipType == shipDestroyer {
+		return destroyerWidth
+	}
+
+	return 0
+}

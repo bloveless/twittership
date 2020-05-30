@@ -372,3 +372,91 @@ func TestEnemyShipsGetUpdatedWithHitCountWhenAVolleyHitsThem(t *testing.T) {
 		t.Fatalf("Enemy ship[1] should have received a hit")
 	}
 }
+
+func TestGameRespondsWithHitWhenAVolleyHitsAnEnemyShip(t *testing.T) {
+	g := NewGame()
+	err := g.LoadEnemyShips("A1H;B8V;E3H;G3V;H8H")
+	if err != nil {
+		t.Fatalf("updating enemy ships: %v", err)
+	}
+
+	err = g.LoadPlayerVolleys("A1;A4")
+	if err != nil {
+		t.Fatalf("updating player volleys: %v", err)
+	}
+
+	response, err := g.PlayerVolley("A5")
+	if err != nil {
+		t.Fatalf("player volley: %v", err)
+	}
+
+	if response != "Hit" {
+		t.Fatalf("expected response to be \"Hit\" but it was %s", response)
+	}
+}
+
+func TestGameRespondsWithYouSunkMyWhenAVolleySinksAnEnemyShip(t *testing.T) {
+	g := NewGame()
+	err := g.LoadEnemyShips("A1H;B8V;E3H;G3V;H8H")
+	if err != nil {
+		t.Fatalf("load enemy ships: %v", err)
+	}
+
+	err = g.LoadPlayerVolleys("A1;A2;A3;A4")
+	if err != nil {
+		t.Fatalf("load player volleys: %v", err)
+	}
+
+	response, err := g.PlayerVolley("A5")
+	if err != nil {
+		t.Fatalf("player volley: %v", err)
+	}
+
+	if response != "You sunk my Aircraft Carrier" {
+		t.Fatalf("expected response to be \"You sunk my Aircraft Carrier\" but it was %s", response)
+	}
+}
+
+func TestGameRespondsWithHitWhenAVolleyHitsAPlayerShip(t *testing.T) {
+	g := NewGame()
+	err := g.LoadPlayerShips("A1H;B8V;E3H;G3V;H8H")
+	if err != nil {
+		t.Fatalf("load player ships: %v", err)
+	}
+
+	err = g.LoadEnemyVolleys("A1;A4")
+	if err != nil {
+		t.Fatalf("load enemy volleys: %v", err)
+	}
+
+	response, err := g.EnemyVolley("A5")
+	if err != nil {
+		t.Fatalf("enemy volley: %v", err)
+	}
+
+	if response != "Hit" {
+		t.Fatalf("expected response to be \"Hit\" but it was %s", response)
+	}
+}
+
+func TestGameRespondsWithYouSunkMyWhenAVolleySinksAPlayerShip(t *testing.T) {
+	g := NewGame()
+	err := g.LoadPlayerShips("A1H;B8V;E3H;G3V;H8H")
+	if err != nil {
+		t.Fatalf("updating player ships: %v", err)
+	}
+
+	err = g.LoadEnemyVolleys("A1;A2;A3;A4")
+	if err != nil {
+		t.Fatalf("updating enemy volleys: %v", err)
+	}
+
+	response, err := g.EnemyVolley("A5")
+	if err != nil {
+		t.Fatalf("enemy volley: %v", err)
+	}
+
+	if response != "You sunk my Aircraft Carrier" {
+		t.Fatalf("expected response to be \"You sunk my Aircraft Carrier\" but it was %s", response)
+	}
+}

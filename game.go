@@ -22,29 +22,45 @@ type volley struct {
 	volleyType volleyType
 }
 
+type boardTile struct {
+	shipIndex   int
+	volleyIndex int
+}
+
 // Game contains all the information necessary to play a game of battleship
 type Game struct {
 	shipPositionRegex   *regexp.Regexp
 	volleyPositionRegex *regexp.Regexp
 	playerShips         []ship
 	playerVolleys       []volley
+	playerBoard         [10][10]boardTile
 	enemyShips          []ship
 	enemyVolleys        []volley
-	shipWidths          map[shipType]int
+	enemyBoard          [10][10]boardTile
 }
 
-// NewGame creates a new game with default shipPositionRegex and shipWidths
+func newBoard() [10][10]boardTile {
+	board := [10][10]boardTile{}
+	for i := range board {
+		boardRow := [10]boardTile{}
+		for j := 0; j < 10; j++ {
+			boardRow[j].shipIndex = -1
+			boardRow[j].volleyIndex = -1
+		}
+
+		board[i] = boardRow
+	}
+
+	return board
+}
+
+// NewGame creates a new game with default regex's
 func NewGame() Game {
 	g := Game{
 		shipPositionRegex:   regexp.MustCompile(`([A-J])([0-9]{1,2})([H,V])`),
 		volleyPositionRegex: regexp.MustCompile(`([A-J])([0-9]{1,2})`),
-		shipWidths: map[shipType]int{
-			shipAircraftCarrier: 5,
-			shipBattleship:      4,
-			shipSubmarine:       3,
-			shipCruiser:         3,
-			shipDestroyer:       2,
-		},
+		playerBoard:         newBoard(),
+		enemyBoard:          newBoard(),
 	}
 
 	return g
@@ -61,7 +77,7 @@ func NewGame() Game {
 func (g *Game) LoadPlayerShips(positions string) error {
 	var err error
 
-	g.playerShips, err = g.getShipsFromPositions(positions)
+	g.playerBoard, g.playerShips, err = g.getShipsFromPositions(g.playerBoard, positions)
 	if err != nil {
 		return fmt.Errorf("setting player positions: %w", err)
 	}
@@ -80,7 +96,7 @@ func (g *Game) LoadPlayerShips(positions string) error {
 func (g *Game) LoadEnemyShips(positions string) error {
 	var err error
 
-	g.enemyShips, err = g.getShipsFromPositions(positions)
+	g.enemyBoard, g.enemyShips, err = g.getShipsFromPositions(g.enemyBoard, positions)
 	if err != nil {
 		return fmt.Errorf("settings enemy positions: %w", err)
 	}
@@ -88,76 +104,82 @@ func (g *Game) LoadEnemyShips(positions string) error {
 	return nil
 }
 
-func (g Game) getShipsFromPositions(positions string) ([]ship, error) {
+func (g Game) getShipsFromPositions(board [10][10]boardTile, positions string) ([10][10]boardTile, []ship, error) {
 	pos := strings.Split(positions, ";")
 	var ships []ship
 	var err error
 
 	// Deal with the Aircraft Carrier
-	ships, err = g.addShip(ships, pos[0], shipAircraftCarrier)
+	board, ships, err = g.addShip(board, ships, pos[0], shipAircraftCarrier)
 	if err != nil {
-		return []ship{}, err
+		return [10][10]boardTile{}, []ship{}, err
 	}
 
 	// Deal with the Battleship
-	ships, err = g.addShip(ships, pos[1], shipBattleship)
+	board, ships, err = g.addShip(board, ships, pos[1], shipBattleship)
 	if err != nil {
-		return []ship{}, err
+		return [10][10]boardTile{}, []ship{}, err
 	}
 
 	// Deal with the Submarine
-	ships, err = g.addShip(ships, pos[2], shipSubmarine)
+	board, ships, err = g.addShip(board, ships, pos[2], shipSubmarine)
 	if err != nil {
-		return []ship{}, err
+		return [10][10]boardTile{}, []ship{}, err
 	}
 
 	// Deal with the Cruiser
-	ships, err = g.addShip(ships, pos[3], shipCruiser)
+	board, ships, err = g.addShip(board, ships, pos[3], shipCruiser)
 	if err != nil {
-		return []ship{}, err
+		return [10][10]boardTile{}, []ship{}, err
 	}
 
 	// Deal with Destroyer
-	ships, err = g.addShip(ships, pos[4], shipDestroyer)
+	board, ships, err = g.addShip(board, ships, pos[4], shipDestroyer)
 	if err != nil {
-		return []ship{}, err
+		return [10][10]boardTile{}, []ship{}, err
 	}
 
-	return ships, nil
+	return board, ships, nil
 }
 
-func (g Game) addShip(ships []ship, position string, shipType shipType) ([]ship, error) {
+func (g Game) addShip(board [10][10]boardTile, ships []ship, position string, shipType shipType) ([10][10]boardTile, []ship, error) {
 	x, y, direction, err := g.parsePosition(position)
 	if err != nil {
-		return []ship{}, err
+		return [10][10]boardTile{}, []ship{}, err
 	}
 
-	if direction == horizontal && x+g.shipWidths[shipType] > 9 {
-		return []ship{}, fmt.Errorf("unable to place ship as ship extends off the board")
+	if direction == horizontal && x+getShipWidth(shipType) > 9 {
+		return [10][10]boardTile{}, []ship{}, fmt.Errorf("unable to place ship as ship extends off the board")
 	}
 
-	if direction == vertical && y+g.shipWidths[shipType] > 9 {
-		return []ship{}, fmt.Errorf("unable to place ship as ship extends off the board")
+	if direction == vertical && y+getShipWidth(shipType) > 9 {
+		return [10][10]boardTile{}, []ship{}, fmt.Errorf("unable to place ship as ship extends off the board")
 	}
 
-	for _, playerShip := range ships {
-		if playerShip.direction == vertical {
-			if y >= playerShip.y && y <= playerShip.y+playerShip.width && x == playerShip.x {
-				return []ship{}, fmt.Errorf("unable to place ship as ship overlaps another ship")
+	if direction == vertical {
+		for i := 0; i < getShipWidth(shipType); i++ {
+			if board[y+i][x].shipIndex != -1 {
+				return [10][10]boardTile{}, []ship{}, fmt.Errorf("unable to place ship as ship overlaps another ship")
 			}
-		}
 
-		if playerShip.direction == horizontal {
-			if x >= playerShip.x && x <= playerShip.x+playerShip.width && y == playerShip.y {
-				return []ship{}, fmt.Errorf("unable to place ship as ship overlaps another ship")
-			}
+			board[y+i][x].shipIndex = int(shipType)
 		}
 	}
 
-	return append(ships, ship{
+	if direction == horizontal {
+		for i := 0; i < getShipWidth(shipType); i++ {
+			if board[y][x+i].shipIndex != -1 {
+				return [10][10]boardTile{}, []ship{}, fmt.Errorf("unable to place ship as ship overlaps another ship")
+			}
+
+			board[y][x+i].shipIndex = int(shipType)
+		}
+	}
+
+	return board, append(ships, ship{
 		x:         x,
 		y:         y,
-		width:     g.shipWidths[shipType],
+		width:     getShipWidth(shipType),
 		direction: direction,
 		shipType:  shipType,
 	}), nil
@@ -202,7 +224,7 @@ func (g *Game) LoadPlayerVolleys(positions string) error {
 		return fmt.Errorf("cannot place player volleys before placing enemy ships")
 	}
 
-	g.playerVolleys, g.enemyShips, err = g.getVolleysFromPositions(g.enemyShips, positions)
+	_, g.enemyBoard, g.playerVolleys, g.enemyShips, err = g.updateVolleysFromPositions(g.enemyBoard, g.playerVolleys, g.enemyShips, positions)
 	if err != nil {
 		return fmt.Errorf("setting player volleys: %w", err)
 	}
@@ -217,7 +239,7 @@ func (g *Game) LoadEnemyVolleys(positions string) error {
 		return fmt.Errorf("cannot place enemy volleys before placing player ships")
 	}
 
-	g.enemyVolleys, g.playerShips, err = g.getVolleysFromPositions(g.playerShips, positions)
+	_, g.playerBoard, g.enemyVolleys, g.playerShips, err = g.updateVolleysFromPositions(g.playerBoard, g.enemyVolleys, g.playerShips, positions)
 	if err != nil {
 		return fmt.Errorf("setting enemy volleys: %w", err)
 	}
@@ -225,15 +247,39 @@ func (g *Game) LoadEnemyVolleys(positions string) error {
 	return nil
 }
 
-func (g Game) getVolleysFromPositions(ships []ship, positions string) ([]volley, []ship, error) {
+func (g *Game) PlayerVolley(position string) (string, error) {
+	var err error
+	var response string
+
+	response, g.enemyBoard, g.playerVolleys, g.enemyShips, err = g.updateVolleysFromPositions(g.enemyBoard, g.playerVolleys, g.enemyShips, position)
+	if err != nil {
+		return "", fmt.Errorf("update player volleys from positions: %w", err)
+	}
+
+	return response, nil
+}
+
+func (g *Game) EnemyVolley(position string) (string, error) {
+	var err error
+	var response string
+
+	response, g.playerBoard, g.enemyVolleys, g.playerShips, err = g.updateVolleysFromPositions(g.playerBoard, g.enemyVolleys, g.playerShips, position)
+	if err != nil {
+		return "", fmt.Errorf("update enemy volleys from positions: %w", err)
+	}
+
+	return response, nil
+}
+
+func (g Game) updateVolleysFromPositions(board [10][10]boardTile, volleys []volley, ships []ship, positions string) (string, [10][10]boardTile, []volley, []ship, error) {
 	pos := strings.Split(positions, ";")
-	var volleys []volley
+	response := "Miss"
 
 	for _, volleyPos := range pos {
 		parts := g.volleyPositionRegex.FindStringSubmatch(volleyPos)
 
 		if parts == nil || len(parts) != 3 {
-			return []volley{}, []ship{}, fmt.Errorf("unable to parse volley position string: %s", positions)
+			return "", [10][10]boardTile{}, []volley{}, []ship{}, fmt.Errorf("unable to parse volley position string: %s", positions)
 		}
 
 		// yPos can't be out of range or invalid due to the regex that is used to get parts[1]
@@ -241,28 +287,42 @@ func (g Game) getVolleysFromPositions(ships []ship, positions string) ([]volley,
 
 		xPos, err := strconv.Atoi(parts[2])
 		if err != nil {
-			return []volley{}, []ship{}, fmt.Errorf("unable to parse volley x position: %v", err)
+			return "", [10][10]boardTile{}, []volley{}, []ship{}, fmt.Errorf("unable to parse volley x position: %v", err)
 		}
 
 		xPos--
 
 		if xPos < 0 || xPos > 9 {
-			return []volley{}, []ship{}, fmt.Errorf("unable to parse volley x position: value out of range")
+			return "", [10][10]boardTile{}, []volley{}, []ship{}, fmt.Errorf("unable to parse volley x position: value out of range")
 		}
 
 		vType := miss
 		for i, currentShip := range ships {
 			if currentShip.direction == horizontal {
-				if xPos >= currentShip.x && xPos <= currentShip.x+g.shipWidths[currentShip.shipType] && yPos == currentShip.y {
+				if xPos >= currentShip.x && xPos <= currentShip.x+getShipWidth(currentShip.shipType) && yPos == currentShip.y {
 					ships[i].hits++
+					if ships[i].hits == ships[i].width {
+						response = fmt.Sprintf("You sunk my %s", shipType(i))
+					} else {
+						response = "Hit"
+					}
+
+					board[yPos][xPos].volleyIndex = len(volleys)
 					vType = hit
 					break
 				}
 			}
 
 			if currentShip.direction == vertical {
-				if yPos >= currentShip.y && yPos <= currentShip.y+g.shipWidths[currentShip.shipType] && xPos == currentShip.x {
+				if yPos >= currentShip.y && yPos <= currentShip.y+getShipWidth(currentShip.shipType) && xPos == currentShip.x {
 					ships[i].hits++
+					if ships[i].hits == ships[i].width {
+						response = fmt.Sprintf("You sunk my %s", shipType(i))
+					} else {
+						response = "Hit"
+					}
+
+					board[yPos][xPos].volleyIndex = len(volleys)
 					vType = hit
 					break
 				}
@@ -276,5 +336,5 @@ func (g Game) getVolleysFromPositions(ships []ship, positions string) ([]volley,
 		})
 	}
 
-	return volleys, ships, nil
+	return response, board, volleys, ships, nil
 }
