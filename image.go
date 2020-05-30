@@ -1,4 +1,4 @@
-package main
+package twittership
 
 import (
 	"fmt"
@@ -27,8 +27,8 @@ type GameImage struct {
 
 // NewGameImageFromGame will create a new game image from a game. There is no validation when converting
 // a game image to a game because the validation is assume to have happened when creating the game.
-func NewGameImageFromGame(g Game, h, w int) (GameImage, error) {
-	gi, err := newGameImage(h, w)
+func NewGameImageFromGame(g Game, h, w int, template string) (GameImage, error) {
+	gi, err := newGameImage(h, w, template)
 	if err != nil {
 		return GameImage{}, fmt.Errorf("unable to create new game image: %w", err)
 	}
@@ -71,7 +71,7 @@ func NewGameImageFromGame(g Game, h, w int) (GameImage, error) {
 
 // NewGameImage will create a battleship gameboard with a background. The GameImage returned represents
 // both the player image, and the enemy image.
-func newGameImage(h, w int) (GameImage, error) {
+func newGameImage(h, w int, template string) (GameImage, error) {
 	totalW, totalH := w*2+80, h+90
 	gi := GameImage{
 		fullImage: image.NewRGBA(image.Rect(0, 0, totalW, totalH)),
@@ -89,7 +89,7 @@ func newGameImage(h, w int) (GameImage, error) {
 		},
 	}
 
-	f, err := os.Open("game_template.png")
+	f, err := os.Open(template)
 	if err != nil {
 		return GameImage{}, fmt.Errorf("opening game_template: %w", err)
 	}
@@ -275,4 +275,8 @@ func (gi GameImage) WriteImage(filename string) error {
 	}
 
 	return nil
+}
+
+func (gi GameImage) GetFullImage() *image.RGBA {
+	return gi.fullImage
 }

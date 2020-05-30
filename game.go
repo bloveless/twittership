@@ -1,4 +1,4 @@
-package main
+package twittership
 
 import (
 	"fmt"
@@ -296,6 +296,8 @@ func (g Game) updateVolleysFromPositions(board [10][10]boardTile, volleys []voll
 			return "", [10][10]boardTile{}, []volley{}, []ship{}, fmt.Errorf("unable to parse volley x position: value out of range")
 		}
 
+		board[yPos][xPos].volleyIndex = len(volleys)
+
 		vType := miss
 		for i, currentShip := range ships {
 			if currentShip.direction == horizontal {
@@ -307,7 +309,6 @@ func (g Game) updateVolleysFromPositions(board [10][10]boardTile, volleys []voll
 						response = "Hit"
 					}
 
-					board[yPos][xPos].volleyIndex = len(volleys)
 					vType = hit
 					break
 				}
@@ -322,7 +323,6 @@ func (g Game) updateVolleysFromPositions(board [10][10]boardTile, volleys []voll
 						response = "Hit"
 					}
 
-					board[yPos][xPos].volleyIndex = len(volleys)
 					vType = hit
 					break
 				}
@@ -337,4 +337,46 @@ func (g Game) updateVolleysFromPositions(board [10][10]boardTile, volleys []voll
 	}
 
 	return response, board, volleys, ships, nil
+}
+
+func (g Game) GetShipMap() [2][10][10]int {
+	shipMap := [2][10][10]int{}
+
+	for y := 0; y < 10; y++ {
+		for x := 0; x < 10; x++ {
+			shipMap[0][y][x] = g.playerBoard[y][x].shipIndex
+		}
+
+		for x := 0; x < 10; x++ {
+			shipMap[1][y][x] = g.enemyBoard[y][x].shipIndex
+		}
+	}
+
+	return shipMap
+}
+
+func (g Game) GetVolleyMap() [2][10][10]int {
+	volleyMap := [2][10][10]int{}
+
+	for y := 0; y < 10; y++ {
+		for x := 0; x < 10; x++ {
+			if g.playerBoard[y][x].volleyIndex == -1 {
+				volleyMap[0][y][x] = -1
+				continue
+			}
+
+			volleyMap[0][y][x] = int(g.playerVolleys[g.playerBoard[y][x].volleyIndex].volleyType)
+		}
+
+		for x := 0; x < 10; x++ {
+			if g.enemyBoard[y][x].volleyIndex == -1 {
+				volleyMap[1][y][x] = -1
+				continue
+			}
+
+			volleyMap[1][y][x] = int(g.enemyVolleys[g.enemyBoard[y][x].volleyIndex].volleyType)
+		}
+	}
+
+	return volleyMap
 }

@@ -1,13 +1,14 @@
-package main
+package tests
 
 import (
 	"image"
 	"os"
 	"testing"
+	"twittership"
 )
 
 func readTestFile(t *testing.T, filename string) image.Image {
-	f, err := os.Open("./test_assets/" + filename)
+	f, err := os.Open("./assets/" + filename)
 	if err != nil {
 		t.Errorf("opening file %s: %v", filename, err)
 	}
@@ -47,7 +48,7 @@ func TestGameImageCanDrawPixelPerfectImages(t *testing.T) {
 	for _, drawImageParam := range drawImageParams {
 		t.Run(drawImageParam.name, func(t *testing.T) {
 			w, h := 401, 401
-			game := NewGame()
+			game := twittership.NewGame()
 			err := game.LoadPlayerShips(drawImageParam.playerPositions)
 			if err != nil {
 				t.Fatalf("setting player ships: %v", err)
@@ -68,7 +69,7 @@ func TestGameImageCanDrawPixelPerfectImages(t *testing.T) {
 				t.Fatalf("setting enemy volleys: %v", err)
 			}
 
-			gameImage, err := NewGameImageFromGame(game, w, h)
+			gameImage, err := twittership.NewGameImageFromGame(game, w, h, "../game_template.png")
 			if err != nil {
 				t.Fatalf("creating new game image: %v", err)
 			}
@@ -77,7 +78,7 @@ func TestGameImageCanDrawPixelPerfectImages(t *testing.T) {
 
 			for x := 0; x < 882; x++ {
 				for y := 0; y < 491; y++ {
-					if expectedImage.At(x, y) != gameImage.fullImage.At(x, y) {
+					if expectedImage.At(x, y) != gameImage.GetFullImage().At(x, y) {
 						t.Fatalf("Color at x: %d y: %d did not match the expected image color", x, y)
 					}
 				}

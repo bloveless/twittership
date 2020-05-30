@@ -1,4 +1,4 @@
-package main
+package twittership
 
 type shipDirection int
 
@@ -10,8 +10,8 @@ const (
 type volleyType int
 
 const (
-	hit volleyType = iota
-	miss
+	miss volleyType = iota
+	hit
 )
 
 type shipType int

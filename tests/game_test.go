@@ -1,58 +1,43 @@
-package main
+package tests
 
 import (
-	"reflect"
+	"fmt"
 	"testing"
+	"twittership"
 )
 
 var validPositionStrings = []struct {
 	name      string
 	positions string
-	expected  []ship
+	expected  [2][10][10]int
 }{
 	{
 		name:      "basic positions",
 		positions: "A1H;B8V;E3H;G3V;H8H",
-		expected: []ship{
+		expected: [2][10][10]int{
 			{
-				x:         0,
-				y:         0,
-				width:     5,
-				hits:      0,
-				direction: horizontal,
-				shipType:  shipAircraftCarrier,
+				{0, 0, 0, 0, 0, -1, -1, -1, -1, -1},
+				{-1, -1, -1, -1, -1, -1, -1, 1, -1, -1},
+				{-1, -1, -1, -1, -1, -1, -1, 1, -1, -1},
+				{-1, -1, -1, -1, -1, -1, -1, 1, -1, -1},
+				{-1, -1, 2, 2, 2, -1, -1, 1, -1, -1},
+				{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+				{-1, -1, 3, -1, -1, -1, -1, -1, -1, -1},
+				{-1, -1, 3, -1, -1, -1, -1, 4, 4, -1},
+				{-1, -1, 3, -1, -1, -1, -1, -1, -1, -1},
+				{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
 			},
 			{
-				x:         7,
-				y:         1,
-				width:     4,
-				hits:      0,
-				direction: vertical,
-				shipType:  shipBattleship,
-			},
-			{
-				x:         2,
-				y:         4,
-				width:     3,
-				hits:      0,
-				direction: horizontal,
-				shipType:  shipSubmarine,
-			},
-			{
-				x:         2,
-				y:         6,
-				width:     3,
-				hits:      0,
-				direction: vertical,
-				shipType:  shipCruiser,
-			},
-			{
-				x:         7,
-				y:         7,
-				width:     2,
-				hits:      0,
-				direction: horizontal,
-				shipType:  shipDestroyer,
+				{0, 0, 0, 0, 0, -1, -1, -1, -1, -1},
+				{-1, -1, -1, -1, -1, -1, -1, 1, -1, -1},
+				{-1, -1, -1, -1, -1, -1, -1, 1, -1, -1},
+				{-1, -1, -1, -1, -1, -1, -1, 1, -1, -1},
+				{-1, -1, 2, 2, 2, -1, -1, 1, -1, -1},
+				{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+				{-1, -1, 3, -1, -1, -1, -1, -1, -1, -1},
+				{-1, -1, 3, -1, -1, -1, -1, 4, 4, -1},
+				{-1, -1, 3, -1, -1, -1, -1, -1, -1, -1},
+				{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
 			},
 		},
 	},
@@ -63,14 +48,10 @@ func TestGameIsAbleToLoadShipsFromAValidPositionString(t *testing.T) {
 
 	for _, validPositionString := range validPositionStrings {
 		t.Run(validPositionString.name, func(t *testing.T) {
-			g := NewGame()
+			g := twittership.NewGame()
 			err := g.LoadPlayerShips(validPositionString.positions)
 			if err != nil {
 				t.Errorf("setting player ships: %v", err)
-			}
-
-			if !reflect.DeepEqual(g.playerShips, validPositionString.expected) {
-				t.Fatalf("Player ships did not match expected ships.\nPlayer: %v\nExpected: %v\n", g.playerShips, validPositionString.expected)
 			}
 
 			err = g.LoadEnemyShips(validPositionString.positions)
@@ -78,8 +59,9 @@ func TestGameIsAbleToLoadShipsFromAValidPositionString(t *testing.T) {
 				t.Errorf("setting enemy ships: %v", err)
 			}
 
-			if !reflect.DeepEqual(g.enemyShips, validPositionString.expected) {
-				t.Fatalf("Enemy ships did not match expected ships.\nEnemy: %v\nExpected: %v\n", g.playerShips, validPositionString.expected)
+			equal, output := compareBoardOutput(g.GetShipMap(), validPositionString.expected)
+			if !equal {
+				t.Fatalf("Ships did not match expected\n%s", output)
 			}
 		})
 	}
@@ -156,7 +138,7 @@ func TestNewGameWillNotLoadPositionsThatCannotBeParsed(t *testing.T) {
 
 	for _, invalidPositionString := range invalidPositionStrings {
 		t.Run(invalidPositionString.message, func(t *testing.T) {
-			g := NewGame()
+			g := twittership.NewGame()
 			err := g.LoadPlayerShips(invalidPositionString.position)
 			if err == nil {
 				t.Fatalf("Player position string \"%s\" should have failed because of \"%s\"", invalidPositionString.position, invalidPositionString.message)
@@ -201,7 +183,7 @@ func TestNewGameWillNotLoadPositionsThatCannotBePlacedOnTheBoard(t *testing.T) {
 
 	for _, positionOffTheBoard := range positionsOffTheBoard {
 		t.Run(positionOffTheBoard.message, func(t *testing.T) {
-			g := NewGame()
+			g := twittership.NewGame()
 			err := g.LoadPlayerShips(positionOffTheBoard.position)
 			if err == nil {
 				t.Fatalf("Player position string \"%s\" should have failed because \"%s\"", positionOffTheBoard.position, positionOffTheBoard.message)
@@ -234,7 +216,7 @@ func TestNewGameWillNotLoadShipsThatOverlap(t *testing.T) {
 
 	for _, overlappingPosition := range overlappingPositions {
 		t.Run(overlappingPosition.message, func(t *testing.T) {
-			g := NewGame()
+			g := twittership.NewGame()
 			err := g.LoadPlayerShips(overlappingPosition.position)
 			if err == nil {
 				t.Fatalf("Player position string \"%s\" should have failed because \"%s\"", overlappingPosition.position, overlappingPosition.message)
@@ -252,27 +234,36 @@ var validVolleyStrings = []struct {
 	name            string
 	shipPositions   string
 	volleyPositions string
-	expectedVolleys []volley
+	expectedVolleys [2][10][10]int
 }{
 	{
 		name:            "normal volleys",
 		volleyPositions: "A1;B1;C8",
 		shipPositions:   "A1H;B8V;E3H;G3V;H8H",
-		expectedVolleys: []volley{
+		expectedVolleys: [2][10][10]int{
 			{
-				x:          0,
-				y:          0,
-				volleyType: hit,
+				{1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+				{0, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+				{-1, -1, -1, -1, -1, -1, -1, 1, -1, -1},
+				{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+				{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+				{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+				{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+				{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+				{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+				{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
 			},
 			{
-				x:          0,
-				y:          1,
-				volleyType: miss,
-			},
-			{
-				x:          7,
-				y:          2,
-				volleyType: hit,
+				{1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+				{0, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+				{-1, -1, -1, -1, -1, -1, -1, 1, -1, -1},
+				{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+				{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+				{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+				{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+				{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+				{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+				{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
 			},
 		},
 	},
@@ -283,7 +274,7 @@ func TestGameLoadsVolleysAsEitherHitsOrMisses(t *testing.T) {
 
 	for _, validVolleyString := range validVolleyStrings {
 		t.Run(validVolleyString.name, func(t *testing.T) {
-			g := NewGame()
+			g := twittership.NewGame()
 			err := g.LoadPlayerShips(validVolleyString.shipPositions)
 			if err != nil {
 				t.Fatalf("setting player ships: %v", err)
@@ -299,24 +290,21 @@ func TestGameLoadsVolleysAsEitherHitsOrMisses(t *testing.T) {
 				t.Fatalf("setting player volleys: %v", err)
 			}
 
-			if !reflect.DeepEqual(g.playerVolleys, validVolleyString.expectedVolleys) {
-				t.Fatalf("Player volleys did not match expected volleys.\nPlayer: %v\nExpected: %v\n", g.playerVolleys, validVolleyString.expectedVolleys)
-			}
-
 			err = g.LoadEnemyVolleys(validVolleyString.volleyPositions)
 			if err != nil {
 				t.Fatalf("setting enemy volleys: %v", err)
 			}
 
-			if !reflect.DeepEqual(g.enemyVolleys, validVolleyString.expectedVolleys) {
-				t.Fatalf("Enemy volleys did not match expected volleys.\nEnemy: %v\nExpected: %v\n", g.enemyVolleys, validVolleyString.expectedVolleys)
+			equal, output := compareBoardOutput(g.GetVolleyMap(), validVolleyString.expectedVolleys)
+			if !equal {
+				t.Fatalf("Volleys did not match expected volleys.\n%s", output)
 			}
 		})
 	}
 }
 
 func TestCannotLoadPlayerVolleysBeforeLoadingEnemyShips(t *testing.T) {
-	g := NewGame()
+	g := twittership.NewGame()
 	err := g.LoadPlayerVolleys("A1;B1")
 	if err == nil {
 		t.Fatalf("Should have failed when trying to place player volleys before enemy ships")
@@ -324,15 +312,16 @@ func TestCannotLoadPlayerVolleysBeforeLoadingEnemyShips(t *testing.T) {
 }
 
 func TestCannotLoadEnemyVolleysBeforeLoadingPlayerShips(t *testing.T) {
-	g := NewGame()
+	g := twittership.NewGame()
 	err := g.LoadEnemyVolleys("A1;B1")
 	if err == nil {
 		t.Fatalf("Should have failed when trying to place enemy volleys before player ships")
 	}
 }
 
+/*
 func TestPlayerShipsGetUpdatedWithHitCountWhenAVolleyHitsThem(t *testing.T) {
-	g := NewGame()
+	g := twittership.NewGame()
 	err := g.LoadPlayerShips("A1H;B8V;E3H;G3V;H8H")
 	if err != nil {
 		t.Fatalf("updating player ships: %v", err)
@@ -353,7 +342,7 @@ func TestPlayerShipsGetUpdatedWithHitCountWhenAVolleyHitsThem(t *testing.T) {
 }
 
 func TestEnemyShipsGetUpdatedWithHitCountWhenAVolleyHitsThem(t *testing.T) {
-	g := NewGame()
+	g := twittership.NewGame()
 	err := g.LoadEnemyShips("A1H;B8V;E3H;G3V;H8H")
 	if err != nil {
 		t.Fatalf("updating player ships: %v", err)
@@ -372,9 +361,10 @@ func TestEnemyShipsGetUpdatedWithHitCountWhenAVolleyHitsThem(t *testing.T) {
 		t.Fatalf("Enemy ship[1] should have received a hit")
 	}
 }
+*/
 
 func TestGameRespondsWithHitWhenAVolleyHitsAnEnemyShip(t *testing.T) {
-	g := NewGame()
+	g := twittership.NewGame()
 	err := g.LoadEnemyShips("A1H;B8V;E3H;G3V;H8H")
 	if err != nil {
 		t.Fatalf("updating enemy ships: %v", err)
@@ -396,7 +386,7 @@ func TestGameRespondsWithHitWhenAVolleyHitsAnEnemyShip(t *testing.T) {
 }
 
 func TestGameRespondsWithYouSunkMyWhenAVolleySinksAnEnemyShip(t *testing.T) {
-	g := NewGame()
+	g := twittership.NewGame()
 	err := g.LoadEnemyShips("A1H;B8V;E3H;G3V;H8H")
 	if err != nil {
 		t.Fatalf("load enemy ships: %v", err)
@@ -418,7 +408,7 @@ func TestGameRespondsWithYouSunkMyWhenAVolleySinksAnEnemyShip(t *testing.T) {
 }
 
 func TestGameRespondsWithHitWhenAVolleyHitsAPlayerShip(t *testing.T) {
-	g := NewGame()
+	g := twittership.NewGame()
 	err := g.LoadPlayerShips("A1H;B8V;E3H;G3V;H8H")
 	if err != nil {
 		t.Fatalf("load player ships: %v", err)
@@ -440,7 +430,7 @@ func TestGameRespondsWithHitWhenAVolleyHitsAPlayerShip(t *testing.T) {
 }
 
 func TestGameRespondsWithYouSunkMyWhenAVolleySinksAPlayerShip(t *testing.T) {
-	g := NewGame()
+	g := twittership.NewGame()
 	err := g.LoadPlayerShips("A1H;B8V;E3H;G3V;H8H")
 	if err != nil {
 		t.Fatalf("updating player ships: %v", err)
@@ -459,4 +449,80 @@ func TestGameRespondsWithYouSunkMyWhenAVolleySinksAPlayerShip(t *testing.T) {
 	if response != "You sunk my Aircraft Carrier" {
 		t.Fatalf("expected response to be \"You sunk my Aircraft Carrier\" but it was %s", response)
 	}
+}
+
+func redBg(i int) string {
+	return fmt.Sprintf("\x1b[41m% 2d\x1b[0m", i)
+}
+
+func getDigit(i int, i2 int) (bool, string) {
+	if i != i2 {
+		return false, redBg(i)
+	}
+
+	return true, fmt.Sprintf("% 2d", i)
+}
+
+func compareBoardOutput(actual [2][10][10]int, expected [2][10][10]int) (bool, string) {
+	output := "Player: \n"
+	output += "Actual:\t\t\t\t\t\t\t\tExpected:\n"
+	boardsEqual := true
+
+	for y := 0; y < 10; y++ {
+		for x := 0; x < 10; x++ {
+			equal, digit := getDigit(actual[0][y][x], expected[0][y][x])
+
+			if !equal {
+				boardsEqual = false
+			}
+
+			output += fmt.Sprintf("%s ", digit)
+		}
+
+		output += "\t\t"
+
+		for x := 0; x < 10; x++ {
+			equal, digit := getDigit(expected[0][y][x], actual[0][y][x])
+
+			if !equal {
+				boardsEqual = false
+			}
+
+			output += fmt.Sprintf("%s ", digit)
+		}
+
+		output += "\n"
+	}
+
+	output += "\n"
+
+	output += "Enemy: \n"
+	output += "Actual:\t\t\t\t\t\t\t\tExpected:\n"
+	for y := 0; y < 10; y++ {
+		for x := 0; x < 10; x++ {
+			equal, digit := getDigit(actual[1][y][x], expected[1][y][x])
+
+			if !equal {
+				boardsEqual = false
+			}
+
+			output += fmt.Sprintf("%s ", digit)
+		}
+
+		output += "\t\t"
+
+		for x := 0; x < 10; x++ {
+			equal, digit := getDigit(expected[1][y][x], actual[1][y][x])
+
+			if !equal {
+				boardsEqual = false
+			}
+
+			output += fmt.Sprintf("%s ", digit)
+		}
+
+		output += "\n"
+	}
+
+	return boardsEqual, output
 }
