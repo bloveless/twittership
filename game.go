@@ -217,6 +217,8 @@ func (g Game) parsePosition(position string) (int, int, shipDirection, error) {
 	return xPos, yPos, direction, nil
 }
 
+// LoadPlayerVolleys will take a list of positions separated by a ; and will
+// load those into the current Game as the players volleys.
 func (g *Game) LoadPlayerVolleys(positions string) error {
 	var err error
 
@@ -232,6 +234,8 @@ func (g *Game) LoadPlayerVolleys(positions string) error {
 	return nil
 }
 
+// LoadEnemyVolleys will take a list of positions separated by a ; and will
+// load those into the current Game as the enemy volleys.
 func (g *Game) LoadEnemyVolleys(positions string) error {
 	var err error
 
@@ -247,6 +251,8 @@ func (g *Game) LoadEnemyVolleys(positions string) error {
 	return nil
 }
 
+// PlayerVolley will execute a single player volley against a game. It will return
+// if the last volley was a hit, miss, or sunk a ship.
 func (g *Game) PlayerVolley(position string) (string, error) {
 	var err error
 	var response string
@@ -259,6 +265,8 @@ func (g *Game) PlayerVolley(position string) (string, error) {
 	return response, nil
 }
 
+// EnemyVolley will execute a single enemy volley against a game. It will return
+// if the last volley was a hit, miss, or sunk a ship.
 func (g *Game) EnemyVolley(position string) (string, error) {
 	var err error
 	var response string
@@ -339,6 +347,8 @@ func (g Game) updateVolleysFromPositions(board [10][10]boardTile, volleys []voll
 	return response, board, volleys, ships, nil
 }
 
+// GetShipMap will convert the ship positions (as ship indexes) and put them into
+// a 2x10x10x map representing the player board [0] and the enemy board [1].
 func (g Game) GetShipMap() [2][10][10]int {
 	shipMap := [2][10][10]int{}
 
@@ -355,6 +365,8 @@ func (g Game) GetShipMap() [2][10][10]int {
 	return shipMap
 }
 
+// GetVolleyMap will convert the volleys (as volley indexes) and put them into
+// a 2x10x10x map representing the player volleys [0] and the enemy volleys [1].
 func (g Game) GetVolleyMap() [2][10][10]int {
 	volleyMap := [2][10][10]int{}
 

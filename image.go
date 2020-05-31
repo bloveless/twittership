@@ -6,7 +6,6 @@ import (
 	"image/color"
 	"image/draw"
 	"image/png"
-	_ "image/png"
 	"os"
 )
 
@@ -262,6 +261,7 @@ func (ui userImage) isPointOnX(x, y, xWidth, yWidth int) bool {
 	return false
 }
 
+// WriteImage will write a PNG to the disk at the location provided by filename.
 func (gi GameImage) WriteImage(filename string) error {
 	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
@@ -277,6 +277,8 @@ func (gi GameImage) WriteImage(filename string) error {
 	return nil
 }
 
+// GetFullImage returns the image.RGBA fullImage. This is mostly used for decoupling the
+// tests from the implementation of the fullImage.
 func (gi GameImage) GetFullImage() *image.RGBA {
 	return gi.fullImage
 }

@@ -32,6 +32,8 @@ func getTileString(tile boardTile, isEnemyBoard bool) string {
 	return " "
 }
 
+// GetGameTextFromGame will return the game as text which can be printed for a CLI
+// version of twittership.
 func GetGameTextFromGame(g Game) string {
 	output := "|---------------------------------------------|\n"
 	output += "|     PLAYER BOARD    | |     ENEMY BOARD     |\n"
