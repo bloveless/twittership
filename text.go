@@ -36,7 +36,7 @@ func GetGameTextFromGame(g Game) string {
 	output := "|---------------------------------------------|\n"
 	output += "|     PLAYER BOARD    | |     ENEMY BOARD     |\n"
 	output += "|---------------------------------------------|\n"
-	output += "|-|1|2|3|4|5|6|7|8|9|\u042E| |-|1|2|3|4|5|6|7|8|9|\u042E|\n"
+	output += "|-|\u2488|\u2489|\u248A|\u248B|\u248C|\u248D|\u248E|\u248F|\u2490|\u2491| |-|\u2488|\u2489|\u248A|\u248B|\u248C|\u248D|\u248E|\u248F|\u2490|\u2491|\n"
 
 	for y := 0; y < 10; y++ {
 		output += fmt.Sprintf("|%s", string('A'+y))
